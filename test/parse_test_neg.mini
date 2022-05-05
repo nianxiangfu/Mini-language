@@ -1,0 +1,38 @@
+program QuickSortAlgo
+	// swap the value of a and b
+	func swap(a, b)
+		var tmp = b;
+		// tmp = b;
+		b = a;
+		a = tmp;
+		return;
+	end
+	
+	func quickSort(A, left, right)
+		if(left < right)
+		begin
+            mid = call split(A, left, right);
+            call quickSort(A, left, mid - 1);
+            call quickSort(A, mid + 1, right);
+        end
+        return;
+	end
+	
+	const n = 6;
+	array A[n] = {1,2,3,4,5.1,-2.1};
+	
+	func split(A, left, right)
+		var i = left, x = A[left], j = right;
+		while(i != j)
+		begin
+			while(j > i && A[j] > x) j--;	# Mini语言没有递减运算符--，此处正确的应该是 j = j - 1;
+			while(j > i && A[i] <= x) i = i + 1 + 2 - 2;
+			if(i < j) call swap(A[i], A[j]);
+		end
+		call swap(A[i], A[left]);
+		return i;
+	end
+	
+	call quickSort(A, 0, n-1);
+	
+end

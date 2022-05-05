@@ -1,0 +1,32 @@
+program bubble_sort
+// swap the value of a and b
+func swap(a, b)
+	begin
+	var tmp = a;
+	a = b;
+	b = tmp;  return;
+end
+end
+
+// bubble sort
+begin
+	const len = 5;
+	array a[len ] = {4.0, 5.1,     1.0, 6.12, 9.98};	// array define
+	var i = 1;
+	while(i < len - 1)
+	begin
+		var j = len - 1, exchange = false;
+		while (  j-1 >= i)
+		begin
+			if ( a[j] < a[j-1 ] )
+			begin
+				call swap ( a[j],  a[j-1]);
+				exchange = true;
+			end
+			j = j - 1;
+		end
+		if(!exchange) 	break;
+		else i = i + 1    ;
+	end
+end
+end
