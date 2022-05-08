@@ -12,7 +12,7 @@ def pre_processing(file_name):
     line_dict = dict()
     if not os.path.exists("tmp"):
         os.makedirs("tmp")
-    new_file_name = "tmp/tmp_" + file_name
+    new_file_name = "tmp/tmp_" + os.path.basename(file_name)
     with open(file_name, "r", encoding="utf-8") as fp:
         nfp = open(new_file_name, "w", encoding="utf_8")
         line = fp.readline()

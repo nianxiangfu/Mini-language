@@ -129,6 +129,25 @@ class CFG():
                 for r in r_list:
                     self.prods.append((left, r))
 
+class Node:
+    def __init__(self, text):
+        self.text = text
+        self.child = []
+
+    def __str__(self):
+        return self.text
+    
+def printTree(node, indent, is_last_child, is_root, file=None):
+    for i in indent:
+        print(i, end = "", file=file)
+    if not is_root:
+        print('└──' if is_last_child else '├──', end="", file=file)
+    print(node, file=file)
+    indent.append('    ' if is_last_child else '│   ')
+    for i, c in enumerate(node.child, 0):
+        printTree(c, indent, i == len(node.child) - 1, False, file=file)
+    indent.pop()
+
 class MiniParser:
     def __init__(self, lexer, cfg):
         self.lexer = lexer
@@ -137,19 +156,56 @@ class MiniParser:
     def nextWord(self):
         return self.lexer.getToken()
         
+    # def LL_1_parse(self):
+    #     word = self.nextWord()
+    #     stack = [self.cfg.eof, self.cfg.start]
+    #     nt_stack = [(self.cfg.start, 1)]
+    #     while True:
+    #         if stack[-1] == self.cfg.eof:   # eof
+    #             if word is None:
+    #                 print("Parsing success.")
+    #                 break
+    #             else:
+    #                 raise MiniParseError(word.value, self.lexer.line_dict[self.lexer.lineno], nt_stack[-1][0])
+    #         elif stack[-1] in self.cfg.Vt:  # Vt
+    #             if stack[-1] == word.t_type:
+    #                 stack.pop()
+    #                 word = self.nextWord()
+    #                 if len(stack) == nt_stack[-1][1]:
+    #                     nt_stack.pop()
+    #             else:
+    #                 # print(stack)
+    #                 # print(nt_stack)
+    #                 raise MiniParseError(word.value, self.lexer.line_dict[self.lexer.lineno], nt_stack[-1][0])
+    #         else:   # Vn
+    #             p = self.cfg.LL_1_table[(stack[-1], word.t_type)]
+    #             if p != self.cfg.eflag:
+    #                 nt = stack.pop()
+    #                 # 对ELSE非终结符进行特判以解决悬挂else问题：else总是与其最近的if进行匹配
+    #                 if nt == "ELSE" and word.t_type == "else":
+    #                     stack += reversed(["else", "SM"])
+    #                 elif p[1][0] != self.cfg.epsilon:
+    #                     if nt in MiniParseError.error_priority_dict.keys() and \
+    #                         MiniParseError.error_priority_dict[nt] > MiniParseError.error_priority_dict[nt_stack[-1][0]]:
+    #                         nt_stack.append((nt, len(stack)))
+    #                     stack += reversed(p[1])
+    #             else:
+    #                 raise MiniParseError(word.value, self.lexer.line_dict[self.lexer.lineno], nt_stack[-1][0])
+    
     def LL_1_parse(self):
         word = self.nextWord()
-        stack = [self.cfg.eof, self.cfg.start]
+        tree = Node(self.cfg.start)
+        stack = [Node(self.cfg.eof), tree]
         nt_stack = [(self.cfg.start, 1)]
         while True:
-            if stack[-1] == self.cfg.eof:   # eof
+            if stack[-1].text == self.cfg.eof:   # eof
                 if word is None:
                     print("Parsing success.")
                     break
                 else:
                     raise MiniParseError(word.value, self.lexer.line_dict[self.lexer.lineno], nt_stack[-1][0])
-            elif stack[-1] in self.cfg.Vt:  # Vt
-                if stack[-1] == word.t_type:
+            elif stack[-1].text in self.cfg.Vt:  # Vt
+                if stack[-1].text == word.t_type:
                     stack.pop()
                     word = self.nextWord()
                     if len(stack) == nt_stack[-1][1]:
@@ -159,16 +215,23 @@ class MiniParser:
                     # print(nt_stack)
                     raise MiniParseError(word.value, self.lexer.line_dict[self.lexer.lineno], nt_stack[-1][0])
             else:   # Vn
-                p = self.cfg.LL_1_table[(stack[-1], word.t_type)]
+                p = self.cfg.LL_1_table[(stack[-1].text, word.t_type)]
                 if p != self.cfg.eflag:
-                    nt = stack.pop()
+                    cur_node = stack.pop()
                     # 对ELSE非终结符进行特判以解决悬挂else问题：else总是与其最近的if进行匹配
-                    if nt == "ELSE" and word.t_type == "else":
-                        stack += reversed(["else", "SM"])
+                    if cur_node.text == "ELSE" and word.t_type == "else":
+                        for i in reversed(["else", "SM"]):
+                            stack.append(Node(i))
+                            cur_node.child.insert(0, stack[-1])
                     elif p[1][0] != self.cfg.epsilon:
-                        if nt in MiniParseError.error_priority_dict.keys() and \
-                            MiniParseError.error_priority_dict[nt] > MiniParseError.error_priority_dict[nt_stack[-1][0]]:
-                            nt_stack.append((nt, len(stack)))
-                        stack += reversed(p[1])
+                        if cur_node.text in MiniParseError.error_priority_dict.keys() and \
+                            MiniParseError.error_priority_dict[cur_node.text] > MiniParseError.error_priority_dict[nt_stack[-1][0]]:
+                            nt_stack.append((cur_node.text, len(stack)))
+                        for i in reversed(p[1]):
+                            stack.append(Node(i))
+                            cur_node.child.insert(0, stack[-1])
+                    elif p[1][0] == self.cfg.epsilon:
+                        cur_node.child.insert(0, Node(self.cfg.epsilon))
                 else:
                     raise MiniParseError(word.value, self.lexer.line_dict[self.lexer.lineno], nt_stack[-1][0])
+        return tree

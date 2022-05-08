@@ -102,7 +102,7 @@ VARIABLE' -> ϵ | [ EXP ]
 
 ## 3 **语法分析算法**
 
-我们使用Python语言实现语法分析算法，并采用面向对象的程序设计方法。程序中设计了三个类如下：
+我们使用Python语言实现语法分析算法，并采用面向对象的程序设计方法。程序中设计了四个类如下：
 
 1. `CFG`：上下文无关文法类，该类定义了一个上下文无关文法G。主要属性包括文法G的非终结符集合`Vn`，终结符集合`Vt`，文法开始符号`start`，产生式集合`prods`，所有文法符号的Fisrt集合`firsts`，所有非终结符的Follow集合`follows`，文法G的LL(1)分析表`LL_1_table`。主要方法包括`getFirsts()`、`getFollows()`、`getParseTable()`，它们分别计算文法G的First集合、Follow集合、LL(1)分析表，伪代码如下：
 
@@ -118,11 +118,19 @@ VARIABLE' -> ϵ | [ EXP ]
 
      ![](Mini语言的语法设计及语法分析.assets/calc_ll_1_table_8x.png)
 
-2. `MiniParser`：Mini语言语法分析器类，内部包含了一个词法分析器`lexer`和一个上下文无关文法`cfg`。该类有两个方法：`nextWord()`负责从`lexer`处取出下一个`token`，`LL_1_parse()`负责进行LL(1)语法分析，`LL_1_parse()`的伪代码如下：
+2. `MiniParser`：Mini语言语法分析器类，内部包含了一个词法分析器`lexer`和一个上下文无关文法`cfg`。该类有两个方法：`nextWord()`负责从`lexer`处取出下一个`token`，`LL_1_parse()`负责进行LL(1)语法分析，LL(1)预测分析算法的伪代码如下：
 
    ![](Mini语言的语法设计及语法分析.assets/ll_1_algo_8x.png)
 
 3. `MiniParseError`：语法分析异常类（出错处理类），在进行LL(1)语法分析的过程中遇到错误将会抛出该异常类的对象，其具体实现逻辑在下一节进行阐述。
+
+4. `Node`：语法树的节点类，该类有两个属性，一个是节点值`text`（即该节点对应的语法符号的种类值），另一个属性是该节点的孩子列表`child`
+
+***注：生成AST与先序遍历打印AST***
+
+> ***生成AST***：在方法`LL_1_parse()`，我们将生成语法树并将其返回。为了生成语法树，我们需要对上述LL(1)预测分析算法做一些修改：每次将语法符号压入栈中之前，根据该语法符号创建一个节点，并对该节点的`text`属性赋值为该语法符号的值，然后将该节点压入栈中（原来是直接将语法符号压入栈中），当需要对一个语法符号用产生式右部进行替换时，将产生式右部的语法符号的节点按顺序加入到该语法符号对应节点的`child`列表中。在初始时创建一个根节点`root`，`root.text`赋值为文法的开始符号，然后依次将`eof`与根节点`root`压入栈中，其余地方不变。
+>
+> ***先序遍历打印AST***：为了以缩进格式（类似操作系统目录树）打印一棵AST，我们只需要用简单的先序DFS+回溯算法遍历各个语法节点即可。
 
 在主程序`main.py`中，我们首先根据输入的源代码文件名读入文件中的源代码字符串并将其进行预处理，将预处理后的源代码字符串传入扫描器对象`mini_lexer`。我们将上下文无关文法`G(PROGRAM)`的所有产生式放入文件`mini_cfg.txt`中，然后将该文件名、文法G的非终结符集合Vn、终结符集合Vt、开始符号start等传入`CFG`类的构造方法以创建上下文无关文法对象`cfg`，`cfg`在构造方法中会解析出文件中的所有产生式并求出First集合、Follow集合、LL(1)分析表，然后将`mini_lexer`和`cfg`传入`MiniParser`类的构造方法中以构造分析器对象`mini_parser`，最后调用`mini_parser.LL_1_parse()`开始分析，若分析成功，程序打印`Parsing success.`，否则抛出`MiniParseError`异常类对象进行报错。
 
@@ -147,11 +155,9 @@ Mini语言的语法分析器由异常类`MiniParseError`完成报错工作，打
 
 ## 5 测试计划
 
-测试用例中所包括的语法单位应该尽可能覆盖Mini语言的文法中的所有非终结符，包括程序定义、函数定义、变量与常量声明、数组声明、各种类型的语句、表达式等语法单位，为了满足上述所有要求，我们决定使用**用Mini语言实现的快速排序算法程序**作为**正测试用例**，快速排序算法虽然精简但具有一定的复杂度，可以满足上述条件。
+测试用例中所包括的语法单位应该尽可能覆盖Mini语言的文法中的所有非终结符，包括程序定义、函数定义、变量与常量声明、数组声明、各种类型的语句、表达式等语法单位，为了满足上述所有要求，我们决定使用**用Mini语言实现的快速排序算法程序**作为**正测试用例**，快速排序算法虽然精简但具有一定的复杂度，除此之外我们可以在测试用例中加上多余的语句以尽可能地覆盖Mini语言中所有的语法成分。
 
-对于**负测试用例**，我们只需在正测试用例的基础上写出与错误信息表格中出现的那些错误项相关的错误代码即可。
-
-下面列出负测试用例：
+对于**负测试用例**，我们只需在正测试用例的基础进行修改写出不符合Mini语言语法的代码即可，例如将`j = j - 1`修改为`j--`（Mini语言没有递减运算符`--`），如下所示：
 
 ```
 program QuickSortAlgo
@@ -194,16 +200,15 @@ program QuickSortAlgo
 end
 ```
 
-执行程序得到结果如下：
+将负测试用例作为输入执行程序得到结果如下：
 
-```
-PS F:\编译原理作业\Mini语言构造实习\code> python .\parsing.py .\parse_test_neg.mini
-Traceback (most recent call last):
-  File ".\parsing.py", line 20, in <module>
-    mini_parser.LL_1_parse()
-  File "F:\编译原理作业\Mini语言构造实习\code\MiniParser.py", line 160, in LL_1_parse
-    raise MiniParseError(word.value, self.lexer.line_dict[self.lexer.lineno], nt_stack[-1][0])
-MiniParser.MiniParseError: Parsing failed, expression error. Illegal word '-' at row:28.
-```
+![image-20220508155855718](Mini语言的语法设计及语法分析.assets/image-20220508155855718.png)
 
-在第28行的语句`j--;`中，`j`被`lexer`识别为一个标识符，第一个`-`被识别为二元运算符减号，此时分析器期望下一个单词符号是一个表达式，但是此时是一个`-`，所以分析器抛出异常报错`Parsing failed, expression error. Illegal word '-' at row:28.`
+
+在负测试用例第28行的语句`j--;`中，`j`被`lexer`识别为一个标识符，第一个`-`被识别为二元运算符减号，此时分析器期望下一个单词符号是一个表达式，但是此时是一个`-`，所以分析器抛出异常报错`Parsing failed, expression error. Illegal word '-' at row:28.`
+
+将正测试用例作为输入执行程序后，程序打印`Parsing success.`，并且我们得到一棵语法树，由于语法树略显庞大，不方便在控制台先序遍历进行打印，于是我们将输出重定向至文件`parse_output.txt`，该文件头部与文件尾部截图如下：
+
+![image-20220508155916654](Mini语言的语法设计及语法分析.assets/image-20220508155916654.png)
+
+![image-20220508155929545](Mini语言的语法设计及语法分析.assets/image-20220508155929545.png)
